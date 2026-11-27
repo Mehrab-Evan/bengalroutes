@@ -44,7 +44,7 @@ footer{background:#061f48;color:#b8c9d9;padding:39px 0 18px}.foot{display:grid;g
 <div class="callout"><div class="wrap"><div class="callbox"><div class="callText"><h2>Let’s make your next journey memorable.</h2><p>Tell us where you want to go and what kind of support you need.</p></div><a class="btn" href="#contact">Contact Bengal Routes&nbsp; ↗</a></div></div></div>
 <section class="content contact" id="contact"><div class="wrap contactGrid"><div class="contactIntro"><div class="kicker">Get in Touch</div><h2>Let’s talk about your journey.</h2><p>Reach out to discuss your travel plans, transport requirements or destination support. We’ll be glad to hear from you.</p><div class="detail"><div class="detailIcon">☎</div><div><b>Phone / WhatsApp</b><a href="https://wa.me/8801711078943" target="_blank" rel="noopener">+880 1711-078943</a></div></div><div class="detail"><div class="detailIcon">✉</div><div><b>Email</b><a href="mailto:bengal.routes@gmail.com">bengal.routes@gmail.com</a></div></div><div class="detail"><div class="detailIcon">⌖</div><div><b>Office Address</b><span>54, Baghghona Road, Lalkhan Bazar,<br>Chattogram, Bangladesh</span></div></div><div class="detail"><div class="detailIcon">◎</div><div><b>Website</b><a href="https://www.bengalroutes.com" target="_blank" rel="noopener">www.bengalroutes.com</a></div></div></div>
 <div class="panel"><h3>Send us an inquiry</h3><p>Complete the form and we will receive your inquiry by email.</p>
-<form id="inquiry" method="POST" target="inquiry-response-frame" action="PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE">
+<form id="inquiry" method="POST" action="PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE">
 <input type="hidden" name="formStartedAt" id="formStartedAt" value="">
 <!-- Honeypot anti-spam field: real visitors should leave this empty. -->
 <div class="field" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden"><label for="website">Leave this field empty</label><input id="website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
@@ -54,7 +54,7 @@ footer{background:#061f48;color:#b8c9d9;padding:39px 0 18px}.foot{display:grid;g
 <div class="field"><label for="message">How can we help? *</label><textarea id="message" name="message" required maxlength="5000" placeholder="Share a few details about your travel plans..."></textarea></div>
 <button class="btn" id="inquirySubmit" type="submit">Send Inquiry&nbsp; ↗</button>
 <p class="note" id="inquiryStatus" role="status" aria-live="polite">Your inquiry will be sent securely to our team by email.</p>
-</form><iframe name="inquiry-response-frame" id="inquiry-response-frame" title="Form submission response" style="display:none;width:0;height:0;border:0"></iframe></div></div></section>
+</form></div></div></section>
 </main>
 <footer><div class="wrap"><div class="foot"><div><a href="#home" aria-label="Bengal Routes home"><img class="footLogo" src="bengal_routes_website_logo.png" alt="Bengal Routes"></a><p>Destination Management Company<br>Your Journey · Our Priority</p></div><div><h4>Explore</h4><a href="#about">About Us</a><a href="#services">Our Services</a><a href="#why">Why Bengal Routes</a></div><div><h4>Contact</h4><a href="tel:+8801711078943">+880 1711-078943</a><a href="mailto:bengal.routes@gmail.com">Email Us</a><a href="#contact">Office Address</a></div></div><div class="copy"><span>© <span id="year">2026</span> Bengal Routes. All rights reserved.</span><span>54, Baghghona Road, Lalkhan Bazar, Chattogram, Bangladesh</span></div></div></footer>
 <script>
@@ -83,37 +83,39 @@ inquiryForm.addEventListener('submit',(e)=>{
     inquiryStatus.style.color='#b45309';
     return;
   }
-  if(!inquiryForm.checkValidity()){return;} // browser shows its own validation messages
+  e.preventDefault(); // we send with fetch() so we can read the reply
+  if(!inquiryForm.reportValidity()) return;
   inquiryButton.disabled=true;
   inquiryButton.textContent='Sending…';
   inquiryStatus.textContent='Sending your inquiry. Please wait…';
   inquiryStatus.style.color='#61748a';
-  clearTimeout(submitTimer);
-  submitTimer=window.setTimeout(()=>{
-    if(inquiryButton.disabled){
-      resetButton();
-      inquiryStatus.textContent='We could not confirm the submission. Please try again or contact us by phone.';
+
+  const ctrl=new AbortController();
+  const timer=setTimeout(()=>ctrl.abort(),25000);
+
+  // URLSearchParams = simple request (no CORS preflight), which Apps Script supports
+  fetch(inquiryForm.action,{
+    method:'POST',
+    body:new URLSearchParams(new FormData(inquiryForm)),
+    signal:ctrl.signal
+  })
+  .then(r=>r.json())
+  .then(data=>{
+    if(data && data.ok){
+      inquiryStatus.textContent='Thank you! Your inquiry has been sent successfully. We will contact you soon.';
+      inquiryStatus.style.color='#15803d';
+      inquiryForm.reset();
+      startedAtField.value=String(Date.now());
+    } else {
+      inquiryStatus.textContent=(data && data.message) || 'Sorry, your inquiry could not be sent. Please try again later.';
       inquiryStatus.style.color='#b45309';
     }
-  },20000);
-});
-
-// Google Apps Script replies from a nested frame on googleusercontent.com,
-// so we validate by origin instead of comparing event.source.
-window.addEventListener('message',(event)=>{
-  if(!/^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(event.origin)) return;
-  if(!event.data || event.data.type!=='BENGAL_ROUTES_INQUIRY') return;
-  clearTimeout(submitTimer);
-  resetButton();
-  if(event.data.ok){
-    inquiryStatus.textContent='Thank you! Your inquiry has been sent successfully. We will contact you soon.';
-    inquiryStatus.style.color='#15803d';
-    inquiryForm.reset();
-    startedAtField.value=String(Date.now());
-  } else {
-    inquiryStatus.textContent=event.data.message || 'Sorry, your inquiry could not be sent. Please try again later.';
+  })
+  .catch(()=>{
+    inquiryStatus.textContent='We could not confirm the submission. Please try again or contact us by phone.';
     inquiryStatus.style.color='#b45309';
-  }
+  })
+  .finally(()=>{clearTimeout(timer);resetButton();});
 });
 
 document.getElementById('year').textContent=new Date().getFullYear();
