@@ -115,14 +115,9 @@ function doPost(e) {
 // ====== HELPERS ======
 // Returns a tiny page that reports the result to the website via postMessage.
 function respond_(ok, message) {
-  var payload = JSON.stringify({ type: 'BENGAL_ROUTES_INQUIRY', ok: ok, message: message });
-  var page =
-    '<!doctype html><html><body><script>' +
-    'var d=' + payload + ';' +
-    'try{window.top.postMessage(d,"*");}catch(e){}' +
-    'try{window.parent.postMessage(d,"*");}catch(e){}' +
-    '</script></body></html>';
-  return HtmlService.createHtmlOutput(page);
+  return ContentService
+    .createTextOutput(JSON.stringify({ ok: ok, message: message }))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 // Trim, remove line breaks (prevents header injection), limit length.
