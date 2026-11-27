@@ -99,7 +99,7 @@ inquiryForm.addEventListener('submit',(e)=>{
     body:new URLSearchParams(new FormData(inquiryForm)),
     signal:ctrl.signal
   })
-  .then(r=>r.json())
+  .then(r=>r.text().then(t=>{try{return JSON.parse(t)}catch(e){console.error('Endpoint did not return JSON (status '+r.status+'). First 300 chars:',t.slice(0,300));throw e}}))
   .then(data=>{
     if(data && data.ok){
       inquiryStatus.textContent='Thank you! Your inquiry has been sent successfully. We will contact you soon.';
@@ -111,7 +111,8 @@ inquiryForm.addEventListener('submit',(e)=>{
       inquiryStatus.style.color='#b45309';
     }
   })
-  .catch(()=>{
+  .catch(err=>{
+    console.error('Inquiry failed:',err);
     inquiryStatus.textContent='We could not confirm the submission. Please try again or contact us by phone.';
     inquiryStatus.style.color='#b45309';
   })
