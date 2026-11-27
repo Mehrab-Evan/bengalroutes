@@ -47,7 +47,7 @@ footer{background:#061f48;color:#b8c9d9;padding:39px 0 18px}.foot{display:grid;g
 <form id="inquiry" method="POST" action="PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE">
 <input type="hidden" name="formStartedAt" id="formStartedAt" value="">
 <!-- Honeypot anti-spam field: real visitors should leave this empty. -->
-<div class="field" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden"><label for="website">Leave this field empty</label><input id="website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+<div class="field" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden"><label for="hp_field">Leave this field empty</label><input id="hp_field" name="hp_field" type="text" tabindex="-1" autocomplete="off"></div>
 <div class="formrow"><div class="field"><label for="name">Your Name *</label><input id="name" name="name" autocomplete="name" required maxlength="100" placeholder="Full name"></div><div class="field"><label for="phone">Phone Number</label><input id="phone" name="phone" autocomplete="tel" maxlength="30" placeholder="+880..."></div></div>
 <div class="field"><label for="email">Email Address *</label><input id="email" name="email" type="email" autocomplete="email" required maxlength="254" placeholder="you@example.com"></div>
 <div class="field"><label for="service">Service Interested In</label><select id="service" name="service"><option>Destination Management</option><option>Transport Services</option><option>Travel Planning</option><option>Customized Experiences</option><option>Local Assistance</option><option>Corporate &amp; Group Travel</option><option>Other Inquiry</option></select></div>
@@ -93,27 +93,23 @@ inquiryForm.addEventListener('submit',(e)=>{
   const ctrl=new AbortController();
   const timer=setTimeout(()=>ctrl.abort(),25000);
 
-  // URLSearchParams = simple request (no CORS preflight), which Apps Script supports
+  // no-cors: the browser sends the form to Apps Script without needing CORS headers.
+  // The reply is opaque (unreadable), so a resolved request is treated as sent.
   fetch(inquiryForm.action,{
     method:'POST',
+    mode:'no-cors',
     body:new URLSearchParams(new FormData(inquiryForm)),
     signal:ctrl.signal
   })
-  .then(r=>r.text().then(t=>{try{return JSON.parse(t)}catch(e){console.error('Endpoint did not return JSON (status '+r.status+'). First 300 chars:',t.slice(0,300));throw e}}))
-  .then(data=>{
-    if(data && data.ok){
-      inquiryStatus.textContent='Thank you! Your inquiry has been sent successfully. We will contact you soon.';
-      inquiryStatus.style.color='#15803d';
-      inquiryForm.reset();
-      startedAtField.value=String(Date.now());
-    } else {
-      inquiryStatus.textContent=(data && data.message) || 'Sorry, your inquiry could not be sent. Please try again later.';
-      inquiryStatus.style.color='#b45309';
-    }
+  .then(()=>{
+    inquiryStatus.textContent='Thank you! Your inquiry has been sent. We will contact you soon.';
+    inquiryStatus.style.color='#15803d';
+    inquiryForm.reset();
+    startedAtField.value=String(Date.now());
   })
   .catch(err=>{
     console.error('Inquiry failed:',err);
-    inquiryStatus.textContent='We could not confirm the submission. Please try again or contact us by phone.';
+    inquiryStatus.textContent='We could not send your inquiry. Please check your connection and try again, or contact us by phone.';
     inquiryStatus.style.color='#b45309';
   })
   .finally(()=>{clearTimeout(timer);resetButton();});
