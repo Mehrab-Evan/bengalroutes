@@ -20,7 +20,7 @@ function doPost(e) {
     var p = (e && e.parameter) ? e.parameter : {};
 
     // 1. Honeypot: bots fill this hidden field
-    if (clean_(p.website, 200)) {
+    if (clean_(p.hp_field, 200)) {
       return respond_(true, 'Thank you!'); // pretend success, silently drop
     }
 
@@ -113,7 +113,7 @@ function doPost(e) {
 }
 
 // ====== HELPERS ======
-// Returns a tiny page that reports the result to the website via postMessage.
+// Returns a small JSON reply (the website does not need to read it).
 function respond_(ok, message) {
   return ContentService
     .createTextOutput(JSON.stringify({ ok: ok, message: message }))
